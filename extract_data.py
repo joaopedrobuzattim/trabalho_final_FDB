@@ -59,46 +59,50 @@ except Exception as err:
 
 
 def loadOlympics():
+    try:
+        summerArr, winterArr = extractOlympics()
 
-    summerArr, winterArr = extractOlympics()
+        for data in summerArr:
+            cursor = cnx.cursor()
+            if(len(data) == 4):
+                cursor.execute("INSERT INTO Olympics (year, city, edition, country, season) VALUES (%s, %s, %s, %s, %s)", [data[0], data[2], data[1], data[3][3:], 'Summer'])
+            cnx.commit()
+            cursor.close()
 
-    for data in summerArr:
-        cursor = cnx.cursor()
-        if(len(data) == 4):
-            cursor.execute("INSERT INTO Olympics (year, city, edition, country, season) VALUES (%s, %s, %s, %s, %s)", [data[0], data[2], data[1], data[3][3:], 'Summer'])
-        cnx.commit()
-        cursor.close()
-
-    for data in winterArr:
-        cursor = cnx.cursor()
-        if(len(data) == 4):
-            cursor.execute("INSERT INTO Olympics (year, city, edition, country, season) VALUES (%s, %s, %s, %s, %s)", [data[0], data[2], data[1], data[3][3:], 'Winter'])
-        cnx.commit()
-        cursor.close()
+        for data in winterArr:
+            cursor = cnx.cursor()
+            if(len(data) == 4):
+                cursor.execute("INSERT INTO Olympics (year, city, edition, country, season) VALUES (%s, %s, %s, %s, %s)", [data[0], data[2], data[1], data[3][3:], 'Winter'])
+            cnx.commit()
+            cursor.close()
+    except Exception as err:
+        print(f"Erro em load Olympics: {err}")
+        cnx.rollback()
 
 
 def loadSports():
-    athletes = get('https://www.teamusa.com/api/athletes?limit=200&sort_field=last_name.keyword')['entries']
+    try:
+        athletes = get('https://www.teamusa.com/api/athletes?limit=450&sort_field=last_name.keyword')['entries']
 
-    cursor = cnx.cursor()    
-    for athlete in athletes:
-        if(athlete['medals'] and (athlete['medals']['bronze'] or athlete['medals']['gold'] or athlete['medals']['silver'])):
-            if( 'Paralympian' not in athlete['past_olympics']):
+        cursor = cnx.cursor()    
+        for athlete in athletes:
+            if( (athlete['medals'] and (athlete['medals']['bronze'] or athlete['medals']['gold'] or athlete['medals']['silver'])) and ('Paralympian' not in athlete['past_olympics']) and (len(athlete['sport']) > 0)  ):
                 for sport in athlete['sport']:
                     cursor.execute('SELECT * FROM Sport WHERE Sport.name = %s', [sport['title']])
                     result = cursor.fetchall()
                     if(len(result) == 0):
                             cursor.execute('INSERT INTO Sport (name, season) VALUES (%s, %s)', [sport['title'], sport['season']])
                             cnx.commit()
+    except Exception as err:
+        print(f"Erro em load Sports: {err}")
+        cnx.rollback()
 
 def loadAthletes():
-    athletes = get('https://www.teamusa.com/api/athletes?limit=400&sort_field=last_name.keyword')['entries']
+    athletes = get('https://www.teamusa.com/api/athletes?limit=450&sort_field=last_name.keyword')['entries']
 
-    cursor = cnx.cursor()
     for athlete in athletes:
-        if(athlete['medals'] and (athlete['medals']['bronze'] or athlete['medals']['gold'] or athlete['medals']['silver'])):
-            if( 'Paralympian' not in athlete['past_olympics']):
-
+        try:
+            if( (athlete['medals']['bronze'] or athlete['medals']['gold'] or athlete['medals']['silver']) and ('Paralympian' not in athlete['past_olympics']) and (len(athlete['sport']) > 0) ):
                 sports_names = []
                 for sport in athlete['sport']:
                     sports_names.append(sport['title'])
@@ -106,59 +110,63 @@ def loadAthletes():
                 pattern = r'\b\d{4}\b'
                 participation_years = re.findall(pattern, athlete['past_olympics'])
 
-                try:
-                    first_name = athlete['first_name']
-                    last_name = athlete['last_name']
-                    age = athlete['quick_facts']['age']
-                    birthday = athlete['quick_facts']['birthday']
-                    deceased_date = athlete['quick_facts']['deceased_date'] if athlete['quick_facts'].get('deceased_date') else None
-                    height = athlete['quick_facts']['height'] if athlete['quick_facts'].get('height') else None
-                    state = athlete['quick_facts']['hometown']['state']
-                    city = athlete['quick_facts']['hometown']['city']
-                    hometown = f"{city}, {state}"
-                    education = athlete['quick_facts']['education'] if athlete['quick_facts'].get('education') else None
-                    gold_medals = athlete['medals']['gold']
-                    silver_medals = athlete['medals']['silver']
-                    bronze_medals = athlete['medals']['bronze']
+            
+                first_name = athlete['first_name']
+                last_name = athlete['last_name']
+                age = athlete['quick_facts']['age']
+                birthday = athlete['quick_facts']['birthday']
+                deceased_date = athlete['quick_facts']['deceased_date'] if athlete['quick_facts'].get('deceased_date') else None
+                height = athlete['quick_facts']['height'] if athlete['quick_facts'].get('height') else None
+                state = athlete['quick_facts']['hometown']['state']
+                city = athlete['quick_facts']['hometown']['city']
+                hometown = f"{city}, {state}"
+                education = athlete['quick_facts']['education'] if athlete['quick_facts'].get('education') else None
+                gold_medals = athlete['medals']['gold']
+                silver_medals = athlete['medals']['silver']
+                bronze_medals = athlete['medals']['bronze']
 
-                    athlete_data = [first_name, last_name, age, birthday, deceased_date, height, hometown, education, gold_medals, silver_medals, bronze_medals]
-        
+                athlete_data = [first_name, last_name, age, birthday, deceased_date, height, hometown, education, gold_medals, silver_medals, bronze_medals]
+    
 
-                
-
-                    cursor.execute('INSERT INTO Athlete (first_name,\
-                                    last_name,\
-                                    age,\
-                                    birthday,\
-                                    deceased_date,\
-                                    height, hometown,\
-                                    education,\
-                                    gold_medals,\
-                                    silver_medals,\
-                                    bronze_medals\
-                                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', athlete_data)
-                    cnx.commit()
-
-
-
-                    athlete_id = cursor.lastrowid
-
-                    for sport in sports_names:
-                        cursor.execute('SELECT id FROM Sport WHERE Sport.name = %s', [sport])
-                        sport_id = cursor.fetchone()[0]              
-                        cursor.execute('INSERT INTO AtlheteSport (athlete_id, sport_id) VALUES (%s, %s)', [athlete_id, sport_id])
-                        cnx.commit()
+            
+                cursor = cnx.cursor()
+                cursor.execute('INSERT INTO Athlete (first_name,\
+                                last_name,\
+                                age,\
+                                birthday,\
+                                deceased_date,\
+                                height, hometown,\
+                                education,\
+                                gold_medals,\
+                                silver_medals,\
+                                bronze_medals\
+                                ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)', athlete_data)
+                cursor.close()
 
 
-                    for year in participation_years:
-                        cursor.execute('SELECT id FROM Olympics WHERE Olympics.year = %s and Olympics.season = %s', [year, athlete['sport'][0]['season']])
-                        olympics_id = cursor.fetchone()[0]
-                        cursor.execute('INSERT INTO Participation (athlete_id, olympics_id) VALUES (%s, %s)', [athlete_id, olympics_id])
-                        cnx.commit()
-                except Exception as err:
-                    print('Atleta:', athlete)
-                    print(f"Erro: {err}")
-                    continue
+                athlete_id = cursor.lastrowid
+            
+                for sport in sports_names:
+                    cursor = cnx.cursor()
+                    cursor.execute('SELECT id FROM Sport WHERE Sport.name = %s', [sport])
+                    sport_id = cursor.fetchone()[0]            
+                    cursor.execute('INSERT INTO AtlheteSport (athlete_id, sport_id) VALUES (%s, %s)', [athlete_id, sport_id])
+                    cursor.close()
+
+
+                for year in participation_years:
+                    cursor = cnx.cursor()
+                    cursor.execute('SELECT id FROM Olympics WHERE Olympics.year = %s and Olympics.season = %s', [year, athlete['sport'][0]['season']])
+                    olympics_id = cursor.fetchone()[0]
+                    cursor.execute('INSERT INTO Participation (athlete_id, olympics_id) VALUES (%s, %s)', [athlete_id, olympics_id])
+                    cursor.close()
+
+                cnx.commit()
+        except Exception as err:
+            print('Atleta:', athlete)
+            print(f"Erro em load Atlhete: {err}")
+            cnx.rollback()
+            continue
 
 loadOlympics()
 print('Dados de olímpiadas carregados com sucesso!\n')
