@@ -1,0 +1,15 @@
+version: '3.8' 
+
+services:
+  db:
+    image: mysql:8.0  
+    build: .
+    container_name: mysql_Trabalho_Final_FDB
+    restart: always  
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: olympic_participation
+      MYSQL_USER: joao  
+      MYSQL_PASSWORD: joao
+    ports:
+      - "3306:3306"  
