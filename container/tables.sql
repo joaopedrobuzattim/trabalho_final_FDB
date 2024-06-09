@@ -2,6 +2,11 @@ drop database if exists olympic_participation;
 create database olympic_participation;
 use olympic_participation;
 
+CREATE TABLE Sport (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(255) NOT NULL,
+    season VARCHAR(255) NOT NULL
+);
 
 CREATE TABLE Athlete (
     id INT PRIMARY KEY AUTO_INCREMENT,
@@ -15,13 +20,9 @@ CREATE TABLE Athlete (
     education VARCHAR(255), 
     gold_medals INT NOT NULL,
     silver_medals INT NOT NULL,
-    bronze_medals INT NOT NULL
-);
-
-CREATE TABLE Sport (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    name VARCHAR(255) NOT NULL,
-    season VARCHAR(255) NOT NULL
+    bronze_medals INT NOT NULL,
+    sport_id INT NOT NULL,
+    FOREIGN KEY (sport_id) REFERENCES Sport(id)
 );
 
 CREATE TABLE Olympics (
@@ -40,13 +41,3 @@ CREATE TABLE Participation (
     FOREIGN KEY (athlete_id) REFERENCES Athlete(id),
     FOREIGN KEY (olympics_id) REFERENCES Olympics(id)
 );
-
-CREATE TABLE AtlheteSport (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    athlete_id INT,
-    sport_id INT,
-    FOREIGN KEY (athlete_id) REFERENCES Athlete(id),
-    FOREIGN KEY (sport_id) REFERENCES Sport(id)
-);
-
-
