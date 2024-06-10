@@ -1,8 +1,12 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+from datetime import datetime
 import mysql.connector
 
+
+USA_URL = 'https://www.teamusa.com/api/athletes?limit=500&sort_field=last_name.keyword'
+WIKI_URL = 'https://pt.wikipedia.org/wiki/Lista_dos_Jogos_Ol%C3%ADmpicos_da_Era_Moderna'
 
 def get(url, isJson=True):
     try:
@@ -17,9 +21,7 @@ def get(url, isJson=True):
         print(f"Erro: {err}")
 
 def extractOlympics():
-    url = "https://pt.wikipedia.org/wiki/Lista_dos_Jogos_Ol%C3%ADmpicos_da_Era_Moderna"
-
-    soup = BeautifulSoup(get(url, isJson=False), 'html.parser')
+    soup = BeautifulSoup(get(WIKI_URL, isJson=False), 'html.parser')
 
     tables = soup.find_all('table', {'class': 'wikitable'})
 
@@ -78,7 +80,7 @@ def loadOlympics():
 
 def loadSports():
     try:
-        athletes = get('https://www.teamusa.com/api/athletes?limit=500&sort_field=last_name.keyword')['entries']
+        athletes = get(USA_URL)['entries']
 
         cursor = cnx.cursor()    
         for athlete in athletes:
@@ -94,25 +96,41 @@ def loadSports():
         cnx.rollback()
 
 def loadAthletes():
-    athletes = get('https://www.teamusa.com/api/athletes?limit=500&sort_field=last_name.keyword')['entries']
+    athletes = get(USA_URL)['entries']
 
     for athlete in athletes:
         try:
             if( (athlete['medals']['bronze'] or athlete['medals']['gold'] or athlete['medals']['silver']) and ('Paralympian' not in athlete['past_olympics']) and (len(athlete['sport']) > 0) ):
+                
                 sport_name = athlete['sport'][0]['title']
                 cursor = cnx.cursor()
                 cursor.execute('SELECT id FROM Sport WHERE Sport.name = %s', [sport_name])
                 sport_id = cursor.fetchone()[0]
-
-                pattern = r'\b\d{4}\b'
-                participation_years = re.findall(pattern, athlete['past_olympics'])
+                cursor.close()
+ 
+                participation_years = re.findall(r'\b\d{4}\b', athlete['past_olympics'])
 
             
                 first_name = athlete['first_name']
                 last_name = athlete['last_name']
-                age = athlete['quick_facts']['age']
                 birthday = athlete['quick_facts']['birthday']
                 deceased_date = athlete['quick_facts']['deceased_date'] if athlete['quick_facts'].get('deceased_date') else None
+
+                if(not athlete['quick_facts'].get('age')):
+                    birthday_date_format = datetime.fromisoformat(birthday)
+                    if(not athlete['quick_facts'].get('deceased_date')):
+                        today = datetime.now()
+                        age = today.year - birthday_date_format.year
+                        if (today.month, today.day) < (birthday_date_format.month, birthday_date_format.day):
+                            age -= 1
+                    else:
+                        deceased_date_format = datetime.fromisoformat(deceased_date)
+                        age = deceased_date_format.year - birthday.year
+                        if (deceased_date_format.month, deceased_date_format.day) < (birthday_date_format.month, birthday_date_format.day):
+                            age -= 1
+                else:
+                    age = athlete['quick_facts']['age']
+                        
                 height = athlete['quick_facts']['height'] if athlete['quick_facts'].get('height') else None
                 state = athlete['quick_facts']['hometown']['state']
                 city = athlete['quick_facts']['hometown']['city']
@@ -153,8 +171,9 @@ def loadAthletes():
 
                 cnx.commit()
         except Exception as err:
-            print('Atleta:', athlete)
             print(f"Erro em load Atlhete: {err}")
+            print(f'Atleta: {athlete['first_name']} {athlete['last_name']}')
+            print(f'Realizando rollback...\n')
             cnx.rollback()
             continue
 
