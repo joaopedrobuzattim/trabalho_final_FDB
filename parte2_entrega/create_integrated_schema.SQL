@@ -17,7 +17,7 @@ CREATE TABLE `atletas` (
   `data_nascimento` DATETIME,
   `data_morte` DATETIME, 
   `local_nascimento` VARCHAR(255),
-  `educação` VARCHAR(255), 
+  `educacao` VARCHAR(255), 
   `medalha_de_ouro` INT NOT NULL,
   `medalha_de_prata` INT NOT NULL,
   `medalha_de_bronze` INT NOT NULL
