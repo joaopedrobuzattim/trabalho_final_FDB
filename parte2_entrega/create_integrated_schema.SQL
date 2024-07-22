@@ -35,7 +35,7 @@ CREATE TABLE `olimpiadas` (
 CREATE TABLE `modalidade` (
   `id_modalidade` int PRIMARY KEY AUTO_INCREMENT,
   `modalidade` varchar(150) NOT NULL
-);
+)auto_increment=64;
 
 CREATE TABLE `esporte` (
   `id_esporte` int PRIMARY KEY AUTO_INCREMENT,
