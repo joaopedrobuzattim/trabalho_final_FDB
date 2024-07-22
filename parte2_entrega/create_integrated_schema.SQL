@@ -25,8 +25,8 @@ CREATE TABLE `atletas` (
 
 CREATE TABLE `olimpiadas` (
     `id_olimpiada` INT PRIMARY KEY AUTO_INCREMENT,
-    `edição` VARCHAR(255) NOT NULL,
-    `país` VARCHAR(255) NOT NULL,
+    `edicao` VARCHAR(255) NOT NULL,
+    `pais` VARCHAR(255) NOT NULL,
     `cidade` VARCHAR(255) NOT NULL,
     `ano` INT NOT NULL,
     `temporada` VARCHAR(255) NOT NULL
