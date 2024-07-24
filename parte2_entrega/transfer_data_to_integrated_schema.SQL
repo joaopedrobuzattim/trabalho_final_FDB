@@ -1,3 +1,113 @@
+-- COMANDOS PARA INSERIR OS DADOS DA BASE CHINESA NA BAESE DE DADOS INTEGRADA
+
+
+-- Inserindo Altetas
+
+INSERT INTO participacao_olimpica.atletas (
+  nome_completo,
+  sexo,
+  idade,
+  altura,
+  unidade_altura,
+  peso,
+  medalha_de_ouro,
+  medalha_de_prata,
+  medalha_de_bronze
+)
+SELECT
+  c.nome AS nome_completo,
+  c.sexo,
+  c.idade,
+  CAST(c.altura AS CHAR) AS altura,
+  'cm' AS unidade_altura,
+  c.peso,
+  (SELECT COUNT(*) FROM CHINA_olympic_participation.participacoes as m WHERE m.id_atleta = c.id_atleta AND m.medalha = 'Gold') AS medalha_de_ouro,
+  (SELECT COUNT(*) FROM CHINA_olympic_participation.participacoes as m WHERE m.id_atleta = c.id_atleta AND m.medalha = 'Silver') AS medalha_de_prata,
+  (SELECT COUNT(*) FROM CHINA_olympic_participation.participacoes as m WHERE m.id_atleta = c.id_atleta AND m.medalha = 'Bronze') AS medalha_de_bronze
+FROM
+  CHINA_olympic_participation.china_atletas c;
+
+ 
+ -- Inerindo Olimpiadas
+ 
+ 
+INSERT INTO participacao_olimpica.olimpiadas (
+  edicao,
+  pais,
+  cidade,
+  ano,
+  temporada
+)
+SELECT
+  ( SELECT edition FROM olympic_participation.Olympics as op WHERE op.year = o.ano and op.season = o.temporada ) as edicao,
+  ( SELECT country FROM olympic_participation.Olympics as op WHERE op.year = o.ano and op.season = o.temporada ) AS pais,
+  o.cidade,
+  o.ano,
+  o.temporada 
+FROM
+  CHINA_olympic_participation.olimpiadas o;
+ 
+
+ -- Inserindo Esporte
+ 
+ INSERT INTO participacao_olimpica.esporte (
+ 	esporte 
+ )
+ SELECT DISTINCT 
+ 	esporte 
+ FROM CHINA_olympic_participation.eventos ;
+ 
+  -- Inserindo Modalidade
+
+ INSERT INTO participacao_olimpica.modalidade (
+ 	modalidade 
+ )
+ SELECT DISTINCT 
+ 	evento as modalidade 
+ FROM CHINA_olympic_participation.eventos;
+
+
+  -- Inserindo Modalidade_Esporte
+
+ INSERT INTO participacao_olimpica.modalidade_esporte (
+ 	id_modalidade,
+ 	id_esporte 
+ )
+ SELECT DISTINCT 
+ 	(SELECT id_modalidade from participacao_olimpica.modalidade p1  where p1.modalidade  = e.evento) as id_modalidade,
+ 	(SELECT id_esporte from participacao_olimpica.esporte p2  where p2.esporte  = e.esporte) as id_esporte
+ FROM CHINA_olympic_participation.eventos e;
+
+-- Inserindo Participacoes 
+
+-- Os ids do atletas mantiveram-se os mesmos
+-- Os ids das olimpiadas mantiveram-se os mesmos
+-- Os ids de modalidade_esporte mantiveram-se na mesma ordem dos registros da tabela de eventos da antiga base
+
+INSERT INTO participacao_olimpica.participacoes (
+	id_atleta,
+	id_olimpiada,
+	id_modalidade_esporte,
+	medalha 
+)
+SELECT 
+	p.id_atleta,
+	p.id_olimpiada,
+	(  
+		select id_modalidade_esporte FROM participacao_olimpica.modalidade_esporte 
+		NATURAL JOIN esporte 
+		NATURAL JOIN modalidade 
+		WHERE
+		modalidade.modalidade = (SELECT DISTINCT evento FROM CHINA_olympic_participation.eventos as e WHERE  e.id_evento = p.id_evento)
+		AND 
+		esporte.esporte = (SELECT DISTINCT esporte FROM CHINA_olympic_participation.eventos as e WHERE  e.id_evento = p.id_evento)
+	) as id_modalidade_esporte,
+	p.medalha 
+FROM CHINA_olympic_participation.participacoes p;
+
+
+-- ---------------------------------------------------------------------------------------------------------------------------------------------
+
 
 -- COMANDOS PARA INSERIR OS DADOS DA BASE AMERICANA NA BAESE DE DADOS INTEGRADA
 
